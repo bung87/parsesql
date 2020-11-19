@@ -233,3 +233,9 @@ test "parse quoted keywords as identifires":
   check $parseSQL("""
   SELECT "SELECT", "FROM" as "GROUP" FROM "WHERE";
   """) == """select "SELECT", "FROM" as "GROUP" from "WHERE";"""
+
+suite "drop":
+  test "drop one":
+    check $parseSQL("DROP TEMPORARY TABLE IF EXISTS tb1 RESTRICT") == "drop table if exists tb1 RESTRICT;"
+  test "drop multiple":
+    check $parseSQL("DROP TEMPORARY TABLE IF EXISTS tb1,tb2 CASCADE") == "drop table if exists tb1 , tb2 CASCADE;"

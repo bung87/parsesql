@@ -536,7 +536,10 @@ type
     nkCreateIndex,
     nkCreateIndexIfNotExists,
     nkEnumDef,
-    nkNumericDef
+    nkNumericDef,
+    nkDropTable,
+    nkDropTableIfExists,
+    nkTables
 
 const
   LiteralNodes = {
@@ -908,6 +911,15 @@ proc parseIfNotExists(p: var SqlParser, k: SqlNodeKind): SqlNode =
   else:
     result = newNode(k)
 
+proc parseIfExists(p: var SqlParser, k: SqlNodeKind): SqlNode =
+  getTok(p)
+  if isKeyw(p, "if"):
+    getTok(p)
+    eat(p, "exists")
+    result = newNode(succ(k))
+  else:
+    result = newNode(k)
+
 proc parseTableConstraint(p: var SqlParser): SqlNode =
   if isKeyw(p, "primary"):
     getTok(p)
@@ -1169,6 +1181,22 @@ proc parseSelect(p: var SqlParser): SqlNode =
     l.add(parseExpr(p))
     result.add(l)
 
+proc parseDrop(p: var SqlParser): SqlNode =
+  result = parseIfExists(p, nkDropTableIfExists)
+  var tables = newNode(nkTables)
+  expectIdent(p)
+  tables.add newNode(nkIdent, p.tok.literal)
+  getTok(p)
+  while p.tok.kind == tkComma:
+    getTok(p)
+    tables.add(newNode(nkIdent, p.tok.literal))
+    getTok(p)
+  result.add tables
+  while p.tok.kind notin {tkSemicolon, tkEof}:
+    if isKeyw(p, "restrict") or isKeyw(p, "cascade"):
+      result.add newNode(nkIdent, p.tok.literal)
+      getTok(p)
+
 proc parseStmt(p: var SqlParser; parent: SqlNode) =
   if isKeyw(p, "create"):
     getTok(p)
@@ -1198,8 +1226,15 @@ proc parseStmt(p: var SqlParser; parent: SqlNode) =
     parent.add parseSelect(p)
   elif isKeyw(p, "begin"):
     getTok(p)
+  elif isKeyw(p, "drop"):
+    getTok(p)
+    optKeyw(p, "temporary")
+    if isKeyw(p, "table"):
+      eat(p, "table")
+      getTok(p)
+      parent.add parseDrop(p)
   else:
-    sqlError(p, "SELECT, CREATE, UPDATE or DELETE expected")
+    sqlError(p, "SELECT, CREATE, DROP, UPDATE or DELETE expected")
 
 proc parse(p: var SqlParser): SqlNode =
   ## parses the content of `p`'s input stream and returns the SQL AST.
@@ -1460,6 +1495,15 @@ proc ra(n: SqlNode, s: var SqlWriter) =
       if i > 1: s.add(',')
       ra(n.sons[i], s)
     s.add(")")
+  of nkDropTable, nkDropTableIfExists:
+    s.addKeyw("drop table")
+    if n.kind == nkDropTableIfExists:
+      s.addKeyw("if exists")
+    ra(n.sons[0], s)
+    if n.sons.len > 1:
+      ra(n.sons[1], s)
+  of nkTables:
+    rs(n, s, prefix = "", suffix = "", sep = ", ")
   of nkCreateType, nkCreateTypeIfNotExists:
     s.addKeyw("create type")
     if n.kind == nkCreateTypeIfNotExists:
