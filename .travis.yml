@@ -1,5 +1,6 @@
 language: c
-
+node_js:
+  - "12"
 cache: ccache
 cache:
   directories:
