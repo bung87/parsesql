@@ -539,7 +539,15 @@ type
     nkNumericDef,
     nkDropTable,
     nkDropTableIfExists,
-    nkTables
+    nkTables,
+    nkCommit,
+    nkRollback,
+    nkDescTable,
+    nkTruncate,
+    nkDropIndex,
+    nkUse,
+    nkCreateDatabase,
+    nkDropDatabase
 
 const
   LiteralNodes = {
@@ -1200,6 +1208,13 @@ proc parseDrop(p: var SqlParser): SqlNode =
 proc parseStmt(p: var SqlParser; parent: SqlNode) =
   if isKeyw(p, "create"):
     getTok(p)
+    if isKeyw(p, "database"):
+      var cd = newNode(nkCreateDatabase)
+      getTok(p)
+      cd.add newNode(nkIdent, p.tok.literal)
+      parent.add cd
+      getTok(p)
+      return
     optKeyw(p, "cached")
     optKeyw(p, "memory")
     optKeyw(p, "temp")
@@ -1228,13 +1243,51 @@ proc parseStmt(p: var SqlParser; parent: SqlNode) =
     getTok(p)
   elif isKeyw(p, "drop"):
     getTok(p)
+    if isKeyw(p, "database"):
+      var cd = newNode(nkDropDatabase)
+      getTok(p)
+      cd.add newNode(nkIdent, p.tok.literal)
+      parent.add cd
+      getTok(p)
+      return
     optKeyw(p, "temporary")
     if isKeyw(p, "table"):
-      eat(p, "table")
+      getTok(p)
       getTok(p)
       parent.add parseDrop(p)
+    elif isKeyw(p, "index"):
+      getTok(p)
+      var d = newNode(nkDropIndex)
+      d.add newNode(nkIdent,p.tok.literal)
+      parent.add d
+      getTok(p)
+  elif isKeyw(p, "commit"):
+    parent.add newNode(nkCommit)
+    getTok(p)
+  elif isKeyw(p, "rollback"):
+    parent.add newNode(nkRollback)
+    getTok(p)
+  elif isKeyw(p, "desc"):
+    var desc = newNode(nkDescTable)
+    getTok(p)
+    desc.add parseTableName(p)
+    parent.add desc
+  elif isKeyw(p, "use"):
+    var desc = newNode(nkUse)
+    getTok(p)
+    desc.add newNode(nkIdent, p.tok.literal)
+    parent.add desc
+    getTok(p)
+  elif isKeyw(p, "truncate"):
+    getTok(p)
+    if isKeyw(p, "table"):
+      eat(p, "table")
+      var truncate = newNode(nkTruncate)
+      truncate.add newNode(nkIdent, p.tok.literal)
+      getTok(p)
+      parent.add truncate
   else:
-    sqlError(p, "SELECT, CREATE, DROP, UPDATE or DELETE expected")
+    sqlError(p, "Unknown command")
 
 proc parse(p: var SqlParser): SqlNode =
   ## parses the content of `p`'s input stream and returns the SQL AST.
@@ -1526,6 +1579,32 @@ proc ra(n: SqlNode, s: var SqlWriter) =
   of nkEnumDef:
     s.addKeyw("enum")
     rs(n, s)
+  of nkCommit:
+    s.addKeyw("commit")
+  of nkRollback:
+    s.addKeyw("rollback")
+  of nkDescTable:
+    s.addKeyw("desc")
+    s.add n.sons[0].strVal
+  of nkTruncate:
+    s.addKeyw("truncate")
+    s.addKeyw("table")
+    s.add n.sons[0].strVal
+  of nkCreateDatabase:
+    s.addKeyw("create")
+    s.addKeyw("database")
+    s.add n.sons[0].strVal
+  of nkDropIndex:
+    s.addKeyw("drop")
+    s.addKeyw("index")
+    s.add n.sons[0].strVal
+  of nkDropDatabase:
+    s.addKeyw("drop")
+    s.addKeyw("database")
+    s.add n.sons[0].strVal
+  of nkUse:
+    s.addKeyw("use")
+    s.add n.sons[0].strVal
   of nkNumericDef:
     for i in 0..n.len-1:
       ra(n.sons[i], s)

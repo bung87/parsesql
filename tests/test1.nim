@@ -239,3 +239,13 @@ suite "drop":
     check $parseSQL("DROP TEMPORARY TABLE IF EXISTS tb1 RESTRICT") == "drop table if exists tb1 RESTRICT;"
   test "drop multiple":
     check $parseSQL("DROP TEMPORARY TABLE IF EXISTS tb1,tb2 CASCADE") == "drop table if exists tb1 , tb2 CASCADE;"
+  test "drop index":
+    check $parseSQL("DROP INDEX index_name;") == "drop index index_name;"
+
+suite "database":
+  test "use":
+    check $parseSQL("USE database_name;") == "use database_name;"
+  test "create":
+    check $parseSQL("CREATE DATABASE database_name;") == "create database database_name;"
+  test "drop":
+    check $parseSQL("DROP DATABASE database_name;") == "drop database database_name;"
