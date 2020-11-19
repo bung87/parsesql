@@ -547,7 +547,8 @@ type
     nkDropIndex,
     nkUse,
     nkCreateDatabase,
-    nkDropDatabase
+    nkDropDatabase,
+    nkStartTrans
 
 const
   LiteralNodes = {
@@ -1201,9 +1202,17 @@ proc parseDrop(p: var SqlParser): SqlNode =
     getTok(p)
   result.add tables
   while p.tok.kind notin {tkSemicolon, tkEof}:
-    if isKeyw(p, "restrict") or isKeyw(p, "cascade"):
-      result.add newNode(nkIdent, p.tok.literal)
-      getTok(p)
+    if isKeyw(p, "restrict"):
+      result.add newNode(nkIdent, "restrict")
+    elif isKeyw(p, "cascade"):
+      result.add newNode(nkIdent, "cascade")
+    getTok(p)
+
+proc parseDescTable(p: var SqlParser, thing: string): SqlNode =
+  result = newNode(nkDescTable)
+  result.add newNode(nkIdent, thing)
+  getTok(p)
+  result.add parseTableName(p)
 
 proc parseStmt(p: var SqlParser; parent: SqlNode) =
   if isKeyw(p, "create"):
@@ -1268,10 +1277,9 @@ proc parseStmt(p: var SqlParser; parent: SqlNode) =
     parent.add newNode(nkRollback)
     getTok(p)
   elif isKeyw(p, "desc"):
-    var desc = newNode(nkDescTable)
-    getTok(p)
-    desc.add parseTableName(p)
-    parent.add desc
+    parent.add parseDescTable(p, "desc")
+  elif isKeyw(p, "describe"):
+    parent.add parseDescTable(p, "describe")
   elif isKeyw(p, "use"):
     var desc = newNode(nkUse)
     getTok(p)
@@ -1286,6 +1294,11 @@ proc parseStmt(p: var SqlParser; parent: SqlNode) =
       truncate.add newNode(nkIdent, p.tok.literal)
       getTok(p)
       parent.add truncate
+  elif isKeyw(p, "start"):
+    getTok(p)
+    if isKeyw(p, "transaction"):
+      eat(p, "transaction")
+      parent.add newNode(nkStartTrans)
   else:
     sqlError(p, "Unknown command")
 
@@ -1584,8 +1597,8 @@ proc ra(n: SqlNode, s: var SqlWriter) =
   of nkRollback:
     s.addKeyw("rollback")
   of nkDescTable:
-    s.addKeyw("desc")
-    s.add n.sons[0].strVal
+    s.addKeyw(n.sons[0].strVal)
+    s.add n.sons[1].strVal
   of nkTruncate:
     s.addKeyw("truncate")
     s.addKeyw("table")
@@ -1605,6 +1618,9 @@ proc ra(n: SqlNode, s: var SqlWriter) =
   of nkUse:
     s.addKeyw("use")
     s.add n.sons[0].strVal
+  of nkStartTrans:
+    s.addKeyw("start")
+    s.addKeyw("transaction")
   of nkNumericDef:
     for i in 0..n.len-1:
       ra(n.sons[i], s)
@@ -1612,7 +1628,6 @@ proc ra(n: SqlNode, s: var SqlWriter) =
 proc renderSQL*(n: SqlNode, upperCase = false): string =
   ## Converts an SQL abstract syntax tree to its string representation.
   var s: SqlWriter
-  s.buffer = ""
   s.upperCase = upperCase
   ra(n, s)
   return s.buffer
@@ -1648,7 +1663,6 @@ proc open(p: var SqlParser, input: Stream, filename: string) =
   ## `filename` is only used for error messages.
   open(SqlLexer(p), input, filename)
   p.tok.kind = tkInvalid
-  p.tok.literal = ""
   getTok(p)
 
 proc parseSQL*(input: Stream, filename: string): SqlNode =

@@ -236,9 +236,9 @@ test "parse quoted keywords as identifires":
 
 suite "drop":
   test "drop one":
-    check $parseSQL("DROP TEMPORARY TABLE IF EXISTS tb1 RESTRICT") == "drop table if exists tb1 RESTRICT;"
+    check $parseSQL("DROP TEMPORARY TABLE IF EXISTS tb1 RESTRICT") == "drop table if exists tb1 restrict;"
   test "drop multiple":
-    check $parseSQL("DROP TEMPORARY TABLE IF EXISTS tb1,tb2 CASCADE") == "drop table if exists tb1 , tb2 CASCADE;"
+    check $parseSQL("DROP TEMPORARY TABLE IF EXISTS tb1,tb2 CASCADE") == "drop table if exists tb1 , tb2 cascade;"
   test "drop index":
     check $parseSQL("DROP INDEX index_name;") == "drop index index_name;"
 
