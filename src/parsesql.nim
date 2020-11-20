@@ -684,7 +684,7 @@ proc parseDataType(p: var SqlParser): SqlNode =
         getTok(p)
     else:
       getTok(p)
-    # ignore (12, 13) part:
+    # ignore (12, 13) part, As of MySQL 8.0.17, the display width attribute is deprecated for integer data types; 
     if p.tok.kind == tkParLe:
       getTok(p)
       expect(p, tkInteger)
