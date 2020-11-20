@@ -659,26 +659,30 @@ proc parseDataType(p: var SqlParser): SqlNode =
       eat(p, tkParRi)
   else:
     expectIdent(p)
-    let isNumericDataType = isKeyw(p, "fixed") or 
-      isKeyw(p, "bigint") or 
-      isKeyw(p, "dec") or 
-      isKeyw(p, "integer") or 
+    let isIntegerFamily = isKeyw(p, "bigint") or  isKeyw(p, "integer") or 
       isKeyw(p, "smallint") or 
       isKeyw(p, "tinyint") or 
       isKeyw(p, "mediumint") or 
-      isKeyw(p, "decimal") or 
-      isKeyw(p, "numeric") or 
+      isKeyw(p, "int")
+    let isDecimal = isKeyw(p, "fixed") or 
+      isKeyw(p, "dec") or 
+      isKeyw(p, "decimal") or
+      isKeyw(p, "numeric")
+    let isDouble = isKeyw(p, "real") or isKeyw(p, "double")
+    let isNumericDataType = isIntegerFamily or isDecimal or
       isKeyw(p, "float") or 
-      isKeyw(p, "real") or 
-      isKeyw(p, "int") or isKeyw(p, "double")
+      isDouble
     if isNumericDataType:
       result = newNode(nkNumericDef)
-      result.add newNode(nkIdent, p.tok.literal)
+      result.add newNode(nkIdent, p.tok.literal.toLowerAscii)
     else:
       result = newNode(nkIdent, p.tok.literal)
-    getTok(p)
-    if isKeyw(p, "precision"):
-      result.add(newNode(nkIdent, p.tok.literal))
+    if isDouble:
+      getTok(p)
+      if isKeyw(p, "precision"):
+        result.add(newNode(nkIdent, "precision"))
+        getTok(p)
+    else:
       getTok(p)
     # ignore (12, 13) part:
     if p.tok.kind == tkParLe:
@@ -690,14 +694,23 @@ proc parseDataType(p: var SqlParser): SqlNode =
         expect(p, tkInteger)
         getTok(p)
       eat(p, tkParRi)
-    elif p.tok.kind == tkIdentifier and isNumericDataType:
-      let isUsigned = isKeyw(p, "unsigned")
-      let isZerofill = isKeyw(p, "zerofill")
-      if isUsigned or isZerofill:
-        result.add(newNode(nkIdent, p.tok.literal))
-        getTok(p)
-        if isUsigned and isKeyw(p, "zerofill"):
-          result.add(newNode(nkIdent, p.tok.literal))
+    if p.tok.kind == tkIdentifier and isIntegerFamily:
+      var flaged = false
+      var zeroFilled = false
+      while p.tok.kind != tkParRi:
+        if zeroFilled and flaged:
+          break
+        if isKeyw(p, "unsigned") and not flaged:
+          result.add(newNode(nkIdent, "unsigned"))
+          flaged = true
+          getTok(p)
+        elif isKeyw(p, "signed") and not flaged:
+          result.add(newNode(nkIdent, "signed"))
+          flaged = true
+          getTok(p)
+        elif isKeyw(p, "zerofill") and not zeroFilled:
+          result.add(newNode(nkIdent, "zerofill"))
+          zeroFilled = true
           getTok(p)
 
 proc getPrecedence(p: SqlParser): int =
