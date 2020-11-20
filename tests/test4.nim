@@ -9,9 +9,9 @@ addOutputFormatter(newConsoleOutputFormatter(OutputLevel.PRINT_FAILURES))
 # https://www.postgresql.org/docs/9.3/datatype-numeric.html#DATATYPE-NUMERIC-TABLE
 suite "numberic":
   test "bit":
-    echo $parseSQL("create table tbl1(a bit);")
+    check $parseSQL("create table tbl1(a bit);") == "create table tbl1(a  bit );"
   test "bit":
-    echo $parseSQL("create table tbl1(a bit(64));")
+    check $parseSQL("create table tbl1(a bit(64));") == "create table tbl1(a  bit );"
   test "tinyint":
     check $parseSQL("create table tbl1(a tinyint);") == "create table tbl1(a  tinyint );"
     check $parseSQL("create table tbl1(a tinyint(3) unsigned);") == "create table tbl1(a  tinyint unsigned );"
@@ -23,11 +23,11 @@ suite "numberic":
   test "smallint":
     check $parseSQL("create table tbl1(a smallint(3) unsigned zerofill);") == "create table tbl1(a  smallint unsigned zerofill );"
     check $parseSQL("create table tbl1(a smallint(3) zerofill unsigned);") == "create table tbl1(a  smallint zerofill unsigned );"
-  test "INTEGER":
+  test "integer":
     check $parseSQL("create table tbl1(a INTEGER(3));") == "create table tbl1(a  integer );"
   test "bigint":
     check $parseSQL("create table tbl1(a bigint(3));") == "create table tbl1(a  bigint );"
-  test "DECIMAL": # SERIAL is an alias for BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE.
+  test "decimal": # SERIAL is an alias for BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE.
     check $parseSQL("create table tbl1(a DECIMAL(3));") == "create table tbl1(a  decimal );"
   test "dec":
     check $parseSQL("create table tbl1(a dec(3));") == "create table tbl1(a  dec );"
@@ -37,9 +37,9 @@ suite "numberic":
     check $parseSQL("create table tbl1(a float(3));") == "create table tbl1(a  float );"
   test "double":
     check $parseSQL("create table tbl1(a double(3));") == "create table tbl1(a  double );"
-  test " DOUBLE PRECISION":
+  test "double precision":
     check $parseSQL("create table tbl1(a DOUBLE PRECISION(3));") == "create table tbl1(a  double precision );"
-  test " real":
+  test "real":
     check $parseSQL("create table tbl1(a real);") == "create table tbl1(a  real );"
   
 
