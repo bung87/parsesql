@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.1.1"
 author        = "bung87"
 description   = "The parsesql module implements a high performance SQL file parser. It parses PostgreSQL syntax and the SQL ANSI standard."
 license       = "MIT"
