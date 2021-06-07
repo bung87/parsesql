@@ -548,7 +548,8 @@ type
     nkUse,
     nkCreateDatabase,
     nkDropDatabase,
-    nkStartTrans
+    nkStartTrans,
+    nkCreateSequence
 
 const
   LiteralNodes = {
@@ -1237,6 +1238,13 @@ proc parseStmt(p: var SqlParser; parent: SqlNode) =
       parent.add cd
       getTok(p)
       return
+    elif isKeyw(p, "sequence"):
+      var cd = newNode(nkCreateSequence)
+      getTok(p)
+      cd.add newNode(nkIdent, p.tok.literal)
+      parent.add cd
+      getTok(p)
+      return
     optKeyw(p, "cached")
     optKeyw(p, "memory")
     optKeyw(p, "temp")
@@ -1619,6 +1627,10 @@ proc ra(n: SqlNode, s: var SqlWriter) =
   of nkCreateDatabase:
     s.addKeyw("create")
     s.addKeyw("database")
+    s.add n.sons[0].strVal
+  of nkCreateSequence:
+    s.addKeyw("create")
+    s.addKeyw("sequence")
     s.add n.sons[0].strVal
   of nkDropIndex:
     s.addKeyw("drop")

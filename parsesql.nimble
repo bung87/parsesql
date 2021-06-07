@@ -9,7 +9,7 @@ srcDir        = "src"
 
 # Dependencies
 
-requires "nim >= 1.5.1"
+requires "nim >= 1.4.0"
 
 task test, "Runs the test suite":
-  exec "testament --megatest:off pattern 'tests/*.nim' "
+  exec """testament --megatest:off pattern 'tests/*.nim' """
