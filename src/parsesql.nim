@@ -1015,6 +1015,11 @@ proc parseSequenceDef(p: var SqlParser): SqlNode =
       optKeyw(p, "with")
       expect(p,tkInteger)
       result.add newNode(nkIntegerLit, p.tok.literal)
+    elif isKeyw(p, "cache"):
+      result.add newNode(nkIdent, p.tok.literal)
+      getTok(p)
+      expect(p,tkInteger)
+      result.add newNode(nkIntegerLit, p.tok.literal)
     elif isKeyw(p, "owned"):
       result.add newNode(nkIdent, p.tok.literal)
       getTok(p)
@@ -1022,6 +1027,7 @@ proc parseSequenceDef(p: var SqlParser): SqlNode =
       result.add newNode(nkIdent,"by")
       result.add parseColumnReference(p)
     elif isKeyw(p, "minvalue") or isKeyw(p, "maxvalue"):
+      # TODO NO MINVALUE,NO MAXVALUE
       result.add newNode(nkIdent, p.tok.literal)
       getTok(p)
       expect(p,tkInteger)
@@ -1029,6 +1035,7 @@ proc parseSequenceDef(p: var SqlParser): SqlNode =
     elif isKeyw(p, "increment"):
       result.add newNode(nkIdent, p.tok.literal)
       getTok(p)
+      optKeyw(p, "by")
       expect(p,tkInteger)
       result.add newNode(nkIntegerLit, p.tok.literal)
     else:
