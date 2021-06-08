@@ -41,5 +41,13 @@ suite "numberic":
     check $parseSQL("create table tbl1(a DOUBLE PRECISION(3));") == "create table tbl1(a  double precision );"
   test "real":
     check $parseSQL("create table tbl1(a real);") == "create table tbl1(a  real );"
+  test "NOT NULL DEFAULT nextval":
+    const s = """
+      CREATE TABLE tablename (
+          colname integer NOT NULL DEFAULT nextval('tablename_colname_seq')
+      );
+      
+      """
+    discard $parseSQL(s)
   
 

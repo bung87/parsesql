@@ -1324,6 +1324,17 @@ proc parseStmt(p: var SqlParser; parent: SqlNode) =
     if isKeyw(p, "transaction"):
       eat(p, "transaction")
       parent.add newNode(nkStartTrans)
+  elif isKeyw(p, "alter"):
+    getTok(p)
+    if isKeyw(p, "table"):
+      parent.add parseTableDef(p)
+    elif isKeyw(p, "sequence"):
+      var cd = newNode(nkCreateSequence)
+      getTok(p)
+      cd.add newNode(nkIdent, p.tok.literal)
+      parent.add cd
+      getTok(p)
+      return
   else:
     sqlError(p, "Unknown command")
 
