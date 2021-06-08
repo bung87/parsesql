@@ -1003,6 +1003,37 @@ proc parseTableDef(p: var SqlParser): SqlNode =
     while p.tok.kind notin {tkSemicolon, tkEof}:
       getTok(p)
 
+proc parseSequenceDef(p: var SqlParser): SqlNode =
+  result = parseIfNotExists(p, nkCreateSequence)
+  expectIdent(p)
+  result.add(newNode(nkIdent, p.tok.literal))
+  while p.tok.kind notin {tkSemicolon, tkEof}:
+    getTok(p)
+    if isKeyw(p, "start"):
+      result.add newNode(nkIdent, p.tok.literal)
+      getTok(p)
+      optKeyw(p, "with")
+      expect(p,tkInteger)
+      result.add newNode(nkIntegerLit, p.tok.literal)
+    elif isKeyw(p, "owned"):
+      result.add newNode(nkIdent, p.tok.literal)
+      getTok(p)
+      eat(p, "by")
+      result.add newNode(nkIdent,"by")
+      result.add parseColumnReference(p)
+    elif isKeyw(p, "minvalue") or isKeyw(p, "maxvalue"):
+      result.add newNode(nkIdent, p.tok.literal)
+      getTok(p)
+      expect(p,tkInteger)
+      result.add newNode(nkIntegerLit, p.tok.literal)
+    elif isKeyw(p, "increment"):
+      result.add newNode(nkIdent, p.tok.literal)
+      getTok(p)
+      expect(p,tkInteger)
+      result.add newNode(nkIntegerLit, p.tok.literal)
+    else:
+      break
+
 proc parseTypeDef(p: var SqlParser): SqlNode =
   result = parseIfNotExists(p, nkCreateType)
   expectIdent(p)
@@ -1243,11 +1274,7 @@ proc parseStmt(p: var SqlParser; parent: SqlNode) =
       getTok(p)
       return
     elif isKeyw(p, "sequence"):
-      var cd = newNode(nkCreateSequence)
-      getTok(p)
-      cd.add newNode(nkIdent, p.tok.literal)
-      parent.add cd
-      getTok(p)
+      parent.add parseSequenceDef(p)
       return
     optKeyw(p, "cached")
     optKeyw(p, "memory")
@@ -1646,7 +1673,8 @@ proc ra(n: SqlNode, s: var SqlWriter) =
   of nkCreateSequence:
     s.addKeyw("create")
     s.addKeyw("sequence")
-    s.add n.sons[0].strVal
+    for i in 0..n.len-1:
+      ra(n.sons[i], s)
   of nkDropIndex:
     s.addKeyw("drop")
     s.addKeyw("index")
