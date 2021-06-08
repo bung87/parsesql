@@ -658,6 +658,7 @@ proc parseDataType(p: var SqlParser): SqlNode =
         result.add(newNode(nkStringLit, p.tok.literal))
         getTok(p)
       eat(p, tkParRi)
+  
   else:
     expectIdent(p)
     let isIntegerFamily = isKeyw(p, "bigint") or  isKeyw(p, "integer") or 
@@ -713,6 +714,9 @@ proc parseDataType(p: var SqlParser): SqlNode =
           result.add(newNode(nkIdent, "zerofill"))
           zeroFilled = true
           getTok(p)
+        else:
+          break
+        
 
 proc getPrecedence(p: SqlParser): int =
   if isOpr(p, "*") or isOpr(p, "/") or isOpr(p, "%"):
