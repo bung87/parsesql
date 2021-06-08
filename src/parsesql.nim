@@ -549,7 +549,8 @@ type
     nkCreateDatabase,
     nkDropDatabase,
     nkStartTrans,
-    nkCreateSequence
+    nkCreateSequence,
+    nkCreateSequenceIfNotExists,
 
 const
   LiteralNodes = {
@@ -1020,6 +1021,15 @@ proc parseSequenceDef(p: var SqlParser): SqlNode =
       getTok(p)
       expect(p,tkInteger)
       result.add newNode(nkIntegerLit, p.tok.literal)
+    elif p.isKeyw("cycle"):
+      result.add newNode(nkIdent, p.tok.literal)
+    elif p.isKeyw("no"):
+      result.add newNode(nkIdent, p.tok.literal)
+      getTok(p)
+      optKeyw(p, "minvalue")
+      optKeyw(p, "maxvalue")
+      optKeyw(p, "cycle")
+      result.add newNode(nkIdent, p.tok.literal)
     elif isKeyw(p, "owned"):
       result.add newNode(nkIdent, p.tok.literal)
       getTok(p)
@@ -1027,7 +1037,6 @@ proc parseSequenceDef(p: var SqlParser): SqlNode =
       result.add newNode(nkIdent,"by")
       result.add parseColumnReference(p)
     elif isKeyw(p, "minvalue") or isKeyw(p, "maxvalue"):
-      # TODO NO MINVALUE,NO MAXVALUE
       result.add newNode(nkIdent, p.tok.literal)
       getTok(p)
       expect(p,tkInteger)
@@ -1280,9 +1289,7 @@ proc parseStmt(p: var SqlParser; parent: SqlNode) =
       parent.add cd
       getTok(p)
       return
-    elif isKeyw(p, "sequence"):
-      parent.add parseSequenceDef(p)
-      return
+
     optKeyw(p, "cached")
     optKeyw(p, "memory")
     optKeyw(p, "temp")
@@ -1293,6 +1300,8 @@ proc parseStmt(p: var SqlParser; parent: SqlNode) =
     optKeyw(p, "hash")
     if isKeyw(p, "table"):
       parent.add parseTableDef(p)
+    elif isKeyw(p, "sequence"):
+      parent.add parseSequenceDef(p)
     elif isKeyw(p, "type"):
       parent.add parseTypeDef(p)
     elif isKeyw(p, "index"):
@@ -1358,17 +1367,6 @@ proc parseStmt(p: var SqlParser; parent: SqlNode) =
     if isKeyw(p, "transaction"):
       eat(p, "transaction")
       parent.add newNode(nkStartTrans)
-  elif isKeyw(p, "alter"):
-    getTok(p)
-    if isKeyw(p, "table"):
-      parent.add parseTableDef(p)
-    elif isKeyw(p, "sequence"):
-      var cd = newNode(nkCreateSequence)
-      getTok(p)
-      cd.add newNode(nkIdent, p.tok.literal)
-      parent.add cd
-      getTok(p)
-      return
   else:
     sqlError(p, "Unknown command")
 
@@ -1631,6 +1629,12 @@ proc ra(n: SqlNode, s: var SqlWriter) =
       if i > 1: s.add(',')
       ra(n.sons[i], s)
     s.add(")")
+  of nkCreateSequence, nkCreateSequenceIfNotExists:
+    s.addKeyw("create sequence")
+    if n.kind == nkCreateSequenceIfNotExists:
+      s.addKeyw("if not exists")
+    for i in 0..n.len-1:
+      ra(n.sons[i], s)
   of nkDropTable, nkDropTableIfExists:
     s.addKeyw("drop table")
     if n.kind == nkDropTableIfExists:
@@ -1677,11 +1681,6 @@ proc ra(n: SqlNode, s: var SqlWriter) =
     s.addKeyw("create")
     s.addKeyw("database")
     s.add n.sons[0].strVal
-  of nkCreateSequence:
-    s.addKeyw("create")
-    s.addKeyw("sequence")
-    for i in 0..n.len-1:
-      ra(n.sons[i], s)
   of nkDropIndex:
     s.addKeyw("drop")
     s.addKeyw("index")
