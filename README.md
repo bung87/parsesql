@@ -1,7 +1,5 @@
-# parsesql  [![Build Status](travis)](https://travis-ci.org/bung87/parsesql)  
+# parsesql  ![Build Status](https://github.com/bung87/parsesql/workflows/Test/badge.svg)    
 
-
-[travis]: https://travis-ci.org/bung87/parsesql.svg?branch=master
 
 The ``parsesql`` module implements a high performance SQL file parser. It parses PostgreSQL syntax and the SQL ANSI standard.  
 
